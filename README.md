@@ -78,7 +78,7 @@ This model is trained entirely on **synthetic** signals. `radioml_validation.py`
 
 Based on how the model was trained, the reasoned expectation is that it would **not** generalize well to arbitrary real-world modulation types out of the box — it learned what *this project's* synthetic clean QPSK signal looks like, not what *any* legitimate RF signal looks like. Closing that gap would mean training or fine-tuning on real, diverse spectrum data collected from the actual environment the system will monitor, which is exactly how real anomaly-detection systems are built in practice (a network operator trains on *their own* network's normal traffic, not on a generic public dataset).
 
-This is flagged here as an open question rather than a confirmed result, and `radioml_validation.py` is ready to run for anyone who wants to actually measure it.
+This is flagged here as an open question rather than a confirmed result.
 
 ---
 

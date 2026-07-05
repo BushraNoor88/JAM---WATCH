@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JAM//WATCH -- RF Spectrum Monitoring Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Orbitron:wght@600;700;800;900&family=Playfair+Display:ital,wght@0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0B0F17; --bg-deep:#070A10; --card:#141A23; --card-hi:#1B2330;
+    --line:#232C3A; --line-bright:#2E3B4E;
+    --primary:#00E5FF; --secondary:#FF9F1C; --danger:#FF4D6D; --success:#00E676;
+    --text:#FFFFFF; --text-muted:#9AA4B2; --text-dim:#5B6472;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:
+      radial-gradient(ellipse 1100px 600px at 12% -5%, rgba(0,229,255,0.08), transparent),
+      radial-gradient(ellipse 900px 500px at 100% 10%, rgba(255,159,28,0.05), transparent),
+      var(--bg);
+    color:var(--text); font-family:'Inter', sans-serif; min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit; text-decoration:none;}
+  .shell{ display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+
+  .sidebar{ background:var(--bg-deep); border-right:1px solid var(--line); padding:22px 16px; display:flex; flex-direction:column; gap:6px; }
+  .brand{ padding:6px 10px 4px 10px; display:flex; flex-direction:column; gap:2px; }
+  .brand-eyebrow{ font-family:'Space Grotesk'; font-size:9px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); display:flex; align-items:center; gap:6px; }
+  .brand-eyebrow .dot{ width:5px; height:5px; border-radius:50%; background:var(--secondary); box-shadow:0 0 6px var(--secondary); }
+  .brand-word{ font-family:'Playfair Display', serif; font-size:26px; font-weight:600; letter-spacing:0.2px; color:var(--text); line-height:1.15; margin:2px 0 18px 0; }
+  .brand-word .slash{ color:var(--secondary); font-style:italic; font-weight:500; }
+  .brand-word .light{ font-weight:500; color:var(--text-muted); }
+  .nav-section-label{ font-family:'Space Grotesk', sans-serif; font-size:10px; letter-spacing:1.6px; text-transform:uppercase; color:var(--text-dim); padding:16px 10px 8px 10px; }
+  .nav-item{ display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:8px; font-size:13.5px; font-weight:500; color:var(--text-muted); cursor:pointer; transition:all .15s ease; position:relative; }
+  .nav-item svg{ width:17px; height:17px; flex-shrink:0; opacity:0.85; }
+  .nav-item:hover{ background:var(--card); color:var(--text); }
+  .nav-item.active{ background:linear-gradient(90deg, rgba(0,229,255,0.12), rgba(0,229,255,0.02)); color:var(--primary); font-weight:600; }
+  .nav-item.active::before{ content:''; position:absolute; left:-16px; top:8px; bottom:8px; width:3px; background:var(--primary); border-radius:0 3px 3px 0; box-shadow:0 0 10px var(--primary); }
+  .nav-item.nav-disabled{ opacity:0.4; cursor:not-allowed; }
+  .nav-item.nav-disabled:hover{ background:none; color:var(--text-muted); }
+  .soon-tag{ margin-left:auto; font-family:'Space Grotesk'; font-size:8.5px; letter-spacing:0.8px; text-transform:uppercase; color:var(--text-dim); background:var(--bg-deep); border:1px solid var(--line); padding:2px 6px; border-radius:10px; }
+
+  .main{ padding:20px 28px 40px 28px; overflow-x:hidden; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; gap:20px; padding-bottom:18px; margin-bottom:22px; border-bottom:1px solid var(--line); }
+  .conn-badge{ display:flex; align-items:center; gap:8px; font-family:'Space Grotesk'; font-size:11.5px; padding:8px 14px; border-radius:9px; background:var(--card); border:1px solid var(--line); }
+  .conn-dot{ width:7px; height:7px; border-radius:50%; }
+  .topbar-actions{ display:flex; align-items:center; gap:14px; }
+  .avatar{ width:36px; height:36px; border-radius:8px; background:linear-gradient(135deg, var(--secondary), #FF6B35); display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk'; font-weight:700; font-size:13px; }
+
+  .page-head{ display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:18px; flex-wrap:wrap; gap:14px;}
+  .page-title{ font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:24px; }
+  .page-sub{ color:var(--text-muted); font-size:13px; margin-top:4px; }
+
+  .controls{ display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap; background:var(--card); border:1px solid var(--line); border-radius:11px; padding:14px 18px; }
+  .controls label{ font-family:'Space Grotesk'; font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-dim); display:block; margin-bottom:6px; }
+  select{
+    font-family:'Space Grotesk'; font-size:13px; background:var(--bg-deep); color:var(--text);
+    border:1px solid var(--line-bright); border-radius:7px; padding:8px 12px; min-width:200px;
+  }
+  .btn{
+    font-family:'Space Grotesk'; font-size:12.5px; font-weight:600; letter-spacing:0.3px;
+    padding:10px 16px; border-radius:8px; border:1px solid var(--line-bright); cursor:pointer;
+    display:flex; align-items:center; gap:7px; transition:all .15s ease; background:var(--bg-deep); color:var(--text-muted);
+  }
+  .btn svg{ width:14px; height:14px; }
+  .btn:hover{ color:var(--text); border-color:var(--primary); }
+  .btn-primary{ background:linear-gradient(135deg, var(--primary), #00B8CC); color:#00232A; border:none; font-weight:700; box-shadow:0 0 20px rgba(0,229,255,0.25); }
+  .btn-primary:hover{ box-shadow:0 0 28px rgba(0,229,255,0.45); color:#00232A; }
+  .btn-primary:disabled{ opacity:0.5; cursor:not-allowed; box-shadow:none; }
+  .toggle-wrap{ display:flex; align-items:center; gap:8px; margin-left:auto; }
+  .toggle{ position:relative; width:38px; height:21px; background:var(--bg-deep); border:1px solid var(--line-bright); border-radius:20px; cursor:pointer; }
+  .toggle::after{ content:''; position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:var(--text-dim); transition:all .2s ease; }
+  .toggle.on{ background:rgba(0,229,255,0.15); border-color:var(--primary); }
+  .toggle.on::after{ left:19px; background:var(--primary); box-shadow:0 0 6px var(--primary); }
+
+  .kpi-grid{ display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin-bottom:14px; }
+  .kpi-card{ background:var(--card); border:1px solid var(--line); border-radius:11px; padding:17px 19px; position:relative; overflow:hidden; transition:border-color .2s ease; }
+  .kpi-card:hover{ border-color:var(--line-bright); }
+  .kpi-card::after{ content:''; position:absolute; top:-40%; right:-20%; width:120px; height:120px; border-radius:50%; background:radial-gradient(circle, var(--glow-color, rgba(0,229,255,0.10)), transparent 70%); }
+  .kpi-label{ font-family:'Space Grotesk'; font-size:10.5px; letter-spacing:1.3px; text-transform:uppercase; color:var(--text-dim); margin-bottom:10px; }
+  .kpi-value{ font-family:'Space Grotesk'; font-size:26px; font-weight:700; letter-spacing:-0.5px; }
+  .kpi-delta{ font-size:11px; margin-top:6px; color:var(--text-muted); }
+
+  .panel{ background:var(--card); border:1px solid var(--line); border-radius:11px; padding:18px 20px; box-shadow:0 8px 30px rgba(0,0,0,0.2); }
+  .panel-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .panel-title{ font-family:'Space Grotesk'; font-size:13px; font-weight:600; letter-spacing:0.3px; display:flex; align-items:center; gap:9px; }
+  .panel-title::before{ content:''; width:3px; height:13px; background:var(--primary); border-radius:2px; box-shadow:0 0 8px var(--primary); }
+  .panel-tag{ font-family:'Space Grotesk'; font-size:10px; color:var(--text-dim); background:var(--bg-deep); border:1px solid var(--line); padding:3px 9px; border-radius:20px; letter-spacing:0.5px; }
+
+  .charts-grid{ display:grid; grid-template-columns:1.4fr 1fr; gap:14px; margin-bottom:14px; }
+  .charts-grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;}
+  canvas{ max-width:100%; }
+  #spectrogramCanvas{ width:100%; height:220px; border-radius:8px; border:1px solid var(--line); display:block; }
+
+  .info-row{ display:flex; flex-direction:column; gap:12px; }
+  .info-item-head{ display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px; }
+  .info-item-head .label{ color:var(--text-muted); font-family:'Space Grotesk'; letter-spacing:0.3px;}
+  .info-item-head .val{ font-family:'Space Grotesk'; font-weight:600; }
+  .bar-track{ height:6px; border-radius:4px; background:var(--bg-deep); overflow:hidden; border:1px solid var(--line); }
+  .bar-fill{ height:100%; border-radius:4px; transition:width .5s ease; }
+  .health-badge{ display:inline-flex; align-items:center; gap:6px; font-family:'Space Grotesk'; font-size:11px; font-weight:600; padding:5px 10px; border-radius:20px; letter-spacing:0.4px; }
+  .health-good{ background:rgba(0,230,118,0.1); color:var(--success); border:1px solid rgba(0,230,118,0.3); }
+
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  thead th{ text-align:left; font-family:'Space Grotesk'; font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--text-dim); padding:10px 12px; border-bottom:1px solid var(--line); font-weight:600; }
+  tbody td{ padding:12px; border-bottom:1px solid var(--line); color:var(--text); }
+  tbody tr{ transition:background .15s ease; }
+  tbody tr:hover{ background:rgba(0,229,255,0.03); }
+  tbody tr:last-child td{ border-bottom:none; }
+  .mono{ font-family:'Space Grotesk'; }
+  .badge{ font-family:'Space Grotesk'; font-size:10.5px; font-weight:700; letter-spacing:0.4px; padding:4px 10px; border-radius:20px; display:inline-block; }
+  .badge-anomaly{ background:rgba(255,77,109,0.12); color:var(--danger); border:1px solid rgba(255,77,109,0.35); }
+  .badge-normal{ background:rgba(0,230,118,0.1); color:var(--success); border:1px solid rgba(0,230,118,0.3); }
+
+  .bottom-grid{ display:grid; grid-template-columns:2fr 1fr; gap:14px; }
+  .empty-note{ color:var(--text-muted); font-family:'Space Grotesk'; font-size:12.5px; padding:30px 0; text-align:center; }
+  .footer-note{ font-family:'Space Grotesk'; font-size:10.5px; color:var(--text-dim); text-align:center; padding-top:20px; letter-spacing:0.6px; }
+  .field-note{
+    font-family:'Playfair Display', serif; font-style:italic; font-size:14px; color:var(--text-muted);
+    text-align:center; line-height:1.6; padding:22px 10px 8px 10px; max-width:640px; margin:0 auto;
+  }
+  .field-note span{ color:var(--secondary); }
+
+  /* ---- Live Detection page ---- */
+  .live-verdict-big{
+    font-family:'Space Grotesk'; font-size:34px; font-weight:700; letter-spacing:1px;
+    text-align:center; padding:26px 0; border-radius:10px; margin-bottom:16px; transition:all .3s ease;
+  }
+  .live-verdict-big.idle{ color:var(--text-dim); background:var(--bg-deep); border:1px solid var(--line); }
+  .live-verdict-big.normal{ color:var(--success); background:rgba(0,230,118,0.08); border:1px solid rgba(0,230,118,0.35); }
+  .live-verdict-big.anomaly{ color:var(--danger); background:rgba(255,77,109,0.1); border:1px solid rgba(255,77,109,0.4); animation:liveAlert 1.2s ease-in-out infinite; }
+  @keyframes liveAlert{ 0%,100%{ box-shadow:0 0 0 rgba(255,77,109,0);} 50%{ box-shadow:0 0 30px rgba(255,77,109,0.3);} }
+
+  .session-stat{ text-align:center; }
+  .session-stat-label{ font-family:'Space Grotesk'; font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-dim); margin-bottom:4px; }
+  .session-stat-value{ font-family:'Space Grotesk'; font-size:20px; font-weight:700; }
+
+  .event-feed{ max-height:360px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
+  .event-item{
+    display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:7px;
+    background:var(--bg-deep); border:1px solid var(--line); font-family:'Space Grotesk'; font-size:12px;
+  }
+  .event-icon{ width:26px; height:26px; border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .event-icon.normal{ background:rgba(0,230,118,0.12); color:var(--success); }
+  .event-icon.anomaly{ background:rgba(255,77,109,0.12); color:var(--danger); }
+  .event-icon svg{ width:13px; height:13px; }
+  .event-text{ flex:1; color:var(--text-muted); }
+  .event-text b{ color:var(--text); }
+  .event-time{ color:var(--text-dim); font-size:11px; }
+
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-track{ background:var(--bg-deep); }
+  ::-webkit-scrollbar-thumb{ background:var(--line-bright); border-radius:4px; }
+
+  @media (max-width: 1100px){
+    .shell{ grid-template-columns:1fr; } .sidebar{ display:none; }
+    .kpi-grid{ grid-template-columns:repeat(2,1fr); }
+    .charts-grid, .charts-grid-2, .bottom-grid{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-eyebrow"><span class="dot"></span>Signal intelligence</div>
+      <div class="brand-word">Jam<span class="slash">//</span><span class="light">Watch</span></div>
+    </div>
+    <div class="nav-section-label">Monitor</div>
+    <div class="nav-item active" id="navDashboard" onclick="switchView('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</div>
+    <div class="nav-item" id="navPerformance" onclick="switchView('performance')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>Model Performance</div>
+    <div class="nav-item" id="navLive" onclick="switchView('live')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 8 4-16 2 8h6"/></svg>Live Detection</div>
+    <div class="nav-section-label">System</div>
+    <div class="nav-item" id="navSettings" onclick="switchView('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</div>
+    <div style="margin-top:auto; padding-top:20px;">
+      <div style="background:var(--bg-deep); border:1px solid var(--line); border-radius:10px; padding:13px; font-family:'Space Grotesk'; font-size:11px; color:var(--text-dim); line-height:1.6;" id="modelInfoBox">
+        Loading model info&hellip;
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="conn-badge"><span class="conn-dot" id="connDot" style="background:var(--text-dim);"></span><span id="connText">Connecting to API&hellip;</span></div>
+      <div class="topbar-actions"><div class="avatar">AK</div></div>
+    </div>
+
+    <div id="dashboardView">
+    <div class="page-head">
+      <div>
+        <div class="page-title">Mission Overview</div>
+        <div class="page-sub">RF spectrum monitoring &middot; real autoencoder inference &middot; <span id="clock"></span></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div>
+        <label>Signal source</label>
+        <select id="signalSelect">
+          <option value="clean">Clean signal</option>
+          <option value="jammed">Jammed (CW tone)</option>
+          <option value="interference">Interference (wideband)</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="scanBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="6 3 20 12 6 21 6 3"/></svg>Run scan
+      </button>
+      <button class="btn" id="batchBtn">Batch &times;10</button>
+      <div class="toggle-wrap">
+        <span style="font-family:'Space Grotesk'; font-size:11.5px; color:var(--text-muted);">Auto-scan</span>
+        <div class="toggle" id="autoToggle"></div>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card" style="--glow-color:rgba(0,229,255,0.12)">
+        <div class="kpi-label">Total scans (this session)</div>
+        <div class="kpi-value" id="kpiTotal">0</div>
+        <div class="kpi-delta">Real inference, live count</div>
+      </div>
+      <div class="kpi-card" style="--glow-color:rgba(255,77,109,0.14)">
+        <div class="kpi-label">Anomalies flagged</div>
+        <div class="kpi-value" id="kpiAnomalies">0</div>
+        <div class="kpi-delta" id="kpiRate">0% anomaly rate</div>
+      </div>
+      <div class="kpi-card" style="--glow-color:rgba(0,230,118,0.12)">
+        <div class="kpi-label">Test-set detection rate</div>
+        <div class="kpi-value" id="kpiDetectionRate">&ndash;</div>
+        <div class="kpi-delta">n=300 held-out evaluation</div>
+      </div>
+      <div class="kpi-card" style="--glow-color:rgba(255,159,28,0.12)">
+        <div class="kpi-label">Avg. inference time</div>
+        <div class="kpi-value" id="kpiInference">&ndash;</div>
+        <div class="kpi-delta">measured server-side</div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Latest scan &mdash; power spectrum</div>
+          <div class="panel-tag" id="lastScanTag">no scan yet</div>
+        </div>
+        <canvas id="spectrumChart" height="95"></canvas>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Model info</div>
+          <span class="health-badge health-good" id="apiHealthBadge">&#9679; checking&hellip;</span>
+        </div>
+        <div class="info-row" id="modelInfoPanel">
+          <div class="empty-note">Loading&hellip;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-grid-2">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Latest spectrogram</div>
+          <div class="panel-tag">real autoencoder input</div>
+        </div>
+        <canvas id="spectrogramCanvas"></canvas>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Reconstruction error (recent scans)</div>
+          <div class="panel-tag">threshold reference line</div>
+        </div>
+        <canvas id="timelineChart" height="140"></canvas>
+      </div>
+    </div>
+
+    <div class="bottom-grid">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Scan history</div>
+          <div class="panel-tag" id="historyCountTag">0 scans</div>
+        </div>
+        <table>
+          <thead><tr><th>Time</th><th>Source</th><th>Error</th><th>Inference</th><th>Verdict</th></tr></thead>
+          <tbody id="alertsBody"><tr><td colspan="5" class="empty-note">No scans yet -- run one above</td></tr></tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Signal mix (this session)</div></div>
+        <canvas id="classChart" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="field-note">"The spectrum is never silent <span>&mdash;</span> we simply teach the model to listen with intent."</div>
+    <div class="footer-note">JAM//WATCH &middot; every number on this page comes from a real forward pass through the trained model &mdash; nothing here is simulated.</div>
+    </div>
+
+    <div id="performanceView" style="display:none">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Model Performance</div>
+          <div class="page-sub">Threshold tuning against the real held-out evaluation set (n=300)</div>
+        </div>
+      </div>
+
+      <div class="charts-grid-2">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Reconstruction error by class</div>
+            <div class="panel-tag">300 real evaluation samples</div>
+          </div>
+          <canvas id="evalScatterChart" height="230"></canvas>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Threshold tuning</div>
+            <div class="panel-tag">live recompute</div>
+          </div>
+
+          <div style="margin-bottom:18px;">
+            <div class="info-item-head"><span class="label">Threshold value</span><span class="val mono" id="thresholdSliderVal">0.00183</span></div>
+            <input type="range" id="thresholdSlider" min="0" max="1" step="0.0001" style="width:100%; accent-color:#00E5FF;">
+            <div style="display:flex; justify-content:space-between; font-family:'Space Grotesk'; font-size:9.5px; color:var(--text-dim); margin-top:4px;">
+              <span id="sliderMin">0</span><span id="sliderMax">0.03</span>
+            </div>
+          </div>
+
+          <div class="info-row">
+            <div class="info-item-head"><span class="label">False positive rate (clean flagged as anomaly)</span><span class="val mono" id="fpRateVal" style="color:#00E676;">0.0%</span></div>
+            <div class="info-item-head"><span class="label">Detection rate (jammed + interference caught)</span><span class="val mono" id="detRateVal" style="color:#00E5FF;">0.0%</span></div>
+            <div class="info-item-head"><span class="label">Clean samples flagged</span><span class="val mono" id="cleanFlaggedVal">0 / 100</span></div>
+            <div class="info-item-head"><span class="label">Jammed samples caught</span><span class="val mono" id="jammedCaughtVal">0 / 100</span></div>
+            <div class="info-item-head"><span class="label">Interference samples caught</span><span class="val mono" id="interferenceCaughtVal">0 / 100</span></div>
+          </div>
+
+          <button class="btn btn-primary" id="applyThresholdBtn" style="width:100%; margin-top:16px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+            Apply this threshold to live detection
+          </button>
+          <div id="applyThresholdMsg" style="font-family:'Space Grotesk'; font-size:11px; color:var(--success); margin-top:8px; text-align:center; height:14px;"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Why this matters</div></div>
+        <p style="font-size:12.5px; color:var(--text-muted); line-height:1.7;">
+          Moving the threshold left catches anomalies faster but risks flagging normal signals as false alarms.
+          Moving it right reduces false alarms but risks missing real jamming/interference. The chart on the left shows
+          exactly where the real error distributions sit for each class, so the tradeoff can be reasoned about with
+          data instead of guessing. The currently deployed threshold (0.00183) was chosen at 4 standard deviations
+          above the clean-signal mean, which happens to fully separate all three classes in this evaluation set --
+          but that separation is a property of this dataset, not a guarantee, which is exactly why this page exists.
+        </p>
+      </div>
+    </div>
+
+    <div id="liveView" style="display:none">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Live Detection</div>
+          <div class="page-sub">Continuous monitoring &middot; real model inference on each cycle</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div>
+          <label>Scan interval</label>
+          <select id="liveIntervalSelect">
+            <option value="1000">Every 1 second</option>
+            <option value="2000" selected>Every 2 seconds</option>
+            <option value="4000">Every 4 seconds</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="liveToggleBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="6 3 20 12 6 21 6 3"/></svg>Start monitoring
+        </button>
+        <button class="btn" id="liveExportBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13m0 0-4-4m4 4 4-4M4 20h16"/></svg>Export session CSV
+        </button>
+        <div style="margin-left:auto; display:flex; gap:26px;">
+          <div class="session-stat"><div class="session-stat-label">Elapsed</div><div class="session-stat-value" id="liveElapsed">00:00</div></div>
+          <div class="session-stat"><div class="session-stat-label">Scans</div><div class="session-stat-value" id="liveScanCount">0</div></div>
+          <div class="session-stat"><div class="session-stat-label">Anomalies</div><div class="session-stat-value" id="liveAnomalyCount" style="color:var(--danger);">0</div></div>
+          <div class="session-stat"><div class="session-stat-label">Rate</div><div class="session-stat-value" id="liveAnomalyRate">0%</div></div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Live spectrogram feed</div>
+            <div class="panel-tag" id="liveScanTag">idle</div>
+          </div>
+          <div class="live-verdict-big idle" id="liveVerdictBig">AWAITING FIRST SCAN</div>
+          <canvas id="liveSpectrogramCanvas" style="width:100%; height:200px; border-radius:8px; border:1px solid var(--line); display:block;"></canvas>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Event feed</div></div>
+          <div class="event-feed" id="eventFeed">
+            <div class="empty-note">Start monitoring to see live events</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-note">Signal source per cycle is drawn from a realistic weighted mix (mostly clean, occasional jammed/interference) to simulate passive spectrum monitoring.</div>
+    </div>
+
+    <div id="settingsView" style="display:none">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Settings</div>
+          <div class="page-sub">System configuration &middot; changes here affect live detection immediately</div>
+        </div>
+      </div>
+
+      <div class="charts-grid-2">
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Anomaly threshold</div></div>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:14px;">
+            Manually set the live threshold. For a data-driven choice, use the Model Performance page instead.
+          </p>
+          <div style="display:flex; gap:10px; align-items:flex-end;">
+            <div style="flex:1;">
+              <label style="font-family:'Space Grotesk'; font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-dim); display:block; margin-bottom:6px;">Threshold value</label>
+              <input type="number" id="manualThresholdInput" step="0.00001" style="width:100%; font-family:'Space Grotesk'; font-size:13px; background:var(--bg-deep); color:var(--text); border:1px solid var(--line-bright); border-radius:7px; padding:9px 12px;">
+            </div>
+            <button class="btn btn-primary" id="manualThresholdBtn" style="width:auto; padding:10px 18px;">Set threshold</button>
+          </div>
+          <div id="manualThresholdMsg" style="font-family:'Space Grotesk'; font-size:11px; color:var(--success); margin-top:10px; height:14px;"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Session data</div></div>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:14px;">
+            Clears every scan recorded this server session (Dashboard stats, history, Live Detection totals). The
+            trained model and the 300-sample evaluation set are untouched.
+          </p>
+          <button class="btn btn-danger" id="resetSessionBtn" style="width:100%;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14Z"/></svg>
+            Reset session data
+          </button>
+          <div id="resetSessionMsg" style="font-family:'Space Grotesk'; font-size:11px; color:var(--success); margin-top:10px; height:14px;"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Connection</div>
+          <span class="health-badge health-good" id="settingsHealthBadge">&#9679; checking&hellip;</span>
+        </div>
+        <div class="info-row">
+          <div class="info-item-head"><span class="label">API base URL</span><span class="val mono" id="settingsApiBase">&ndash;</span></div>
+          <div class="info-item-head"><span class="label">Model parameters</span><span class="val mono" id="settingsParams">&ndash;</span></div>
+          <div class="info-item-head"><span class="label">Device</span><span class="val mono" id="settingsDevice">&ndash;</span></div>
+          <div class="info-item-head"><span class="label">Current threshold</span><span class="val mono" id="settingsThreshold">&ndash;</span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const API_BASE = 'http://127.0.0.1:8000';
+Chart.defaults.font.family = "'Space Grotesk', sans-serif";
+Chart.defaults.color = '#9AA4B2';
+const GRID = 'rgba(255,255,255,0.05)';
+
+function updateClock(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString(); }
+updateClock(); setInterval(updateClock, 1000);
+
+// ---------- Charts (created empty, filled with real data) ----------
+const spectrumChart = new Chart(document.getElementById('spectrumChart'), {
+  type:'line',
+  data:{ labels:[], datasets:[
+    { label:'Power spectrum (last scan)', data:[], borderColor:'#00E5FF', backgroundColor:'rgba(0,229,255,0.08)', fill:true, tension:0.3, pointRadius:0, borderWidth:2 },
+    { label:'Noise floor (p10 estimate)', data:[], borderColor:'#FF9F1C', borderDash:[4,3], tension:0.3, pointRadius:0, borderWidth:1.5 },
+  ]},
+  options:{ responsive:true, animation:{duration:300},
+    plugins:{ legend:{ labels:{ boxWidth:10, font:{size:10.5} } } },
+    scales:{ x:{ grid:{color:GRID}, ticks:{display:false} }, y:{ grid:{color:GRID}, title:{display:true, text:'normalized power', font:{size:10}} } } }
+});
+
+const timelineChart = new Chart(document.getElementById('timelineChart'), {
+  type:'bar',
+  data:{ labels:[], datasets:[{ data:[], backgroundColor:[], borderRadius:3, barThickness:10 }] },
+  options:{ responsive:true, plugins:{ legend:{display:false} },
+    scales:{ x:{ grid:{display:false}, ticks:{display:false} }, y:{ grid:{color:GRID}, ticks:{font:{size:9}} } } }
+});
+
+const classChart = new Chart(document.getElementById('classChart'), {
+  type:'doughnut',
+  data:{ labels:['Clean','Jammed','Interference'], datasets:[{ data:[0,0,0], backgroundColor:['#00E676','#FF9F1C','#FF4D6D'], borderColor:'#141A23', borderWidth:3 }] },
+  options:{ responsive:true, cutout:'65%', plugins:{ legend:{ position:'bottom', labels:{ boxWidth:9, font:{size:10.5}, padding:12 } } } }
+});
+
+// ---------- Spectrogram heatmap (real data, drawn once per scan) ----------
+function drawSpectrogram(spec, canvasId){
+  canvasId = canvasId || 'spectrogramCanvas';
+  const canvas = document.getElementById(canvasId);
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = 220;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#0B0F17'; ctx.fillRect(0,0,w,h);
+
+  const freqBins = spec.length, timeBins = spec[0].length;
+  const cellW = w / timeBins, cellH = h / freqBins;
+
+  function amberColor(t){
+    const stops = [[11,15,23],[61,36,8],[138,90,34],[255,159,28],[255,224,168]];
+    const scaled = t * (stops.length-1);
+    const i = Math.min(Math.floor(scaled), stops.length-2);
+    const f = scaled - i;
+    const c = stops[i].map((v,idx)=>Math.round(v+(stops[i+1][idx]-v)*f));
+    return `rgb(${c[0]},${c[1]},${c[2]})`;
+  }
+  for(let fi=0; fi<freqBins; fi++){
+    for(let ti=0; ti<timeBins; ti++){
+      const val = spec[fi][ti];
+      ctx.fillStyle = amberColor(Math.max(0,Math.min(1,val)));
+      ctx.fillRect(ti*cellW, h - (fi+1)*cellH, cellW+0.5, cellH+0.5);
+    }
+  }
+}
+
+// ---------- API calls ----------
+async function apiGet(path){
+  const res = await fetch(API_BASE + path);
+  if(!res.ok) throw new Error('API error ' + res.status);
+  return res.json();
+}
+
+async function checkHealth(){
+  try{
+    await apiGet('/health');
+    document.getElementById('connDot').style.background = '#00E676';
+    document.getElementById('connDot').style.boxShadow = '0 0 6px #00E676';
+    document.getElementById('connText').textContent = 'Connected to JAM//WATCH API';
+    document.getElementById('apiHealthBadge').innerHTML = '&#9679; Model online';
+    return true;
+  }catch(e){
+    document.getElementById('connDot').style.background = '#FF4D6D';
+    document.getElementById('connText').textContent = 'API unreachable -- start uvicorn on :8000';
+    document.getElementById('apiHealthBadge').innerHTML = '&#9679; Offline';
+    return false;
+  }
+}
+
+async function loadModelInfo(){
+  try{
+    const info = await apiGet('/model-info');
+    document.getElementById('modelInfoBox').innerHTML =
+      `<span style="color:#00E676">&#9679;</span> ${info.parameters.toLocaleString()} params &middot; ${info.device.toUpperCase()}<br>threshold ${info.threshold.toFixed(5)}`;
+    document.getElementById('kpiDetectionRate').textContent = (info.evaluation.detection_rate*100).toFixed(0) + '%';
+    document.getElementById('modelInfoPanel').innerHTML = `
+      <div class="info-item-head"><span class="label">Architecture</span><span class="val">${info.architecture}</span></div>
+      <div class="info-item-head"><span class="label">Parameters</span><span class="val">${info.parameters.toLocaleString()}</span></div>
+      <div class="info-item-head"><span class="label">Device</span><span class="val">${info.device.toUpperCase()}</span></div>
+      <div class="info-item-head"><span class="label">Anomaly threshold</span><span class="val">${info.threshold.toFixed(5)}</span></div>
+      <div class="info-item-head"><span class="label">False positive rate (test)</span><span class="val">${(info.evaluation.false_positive_rate*100).toFixed(1)}%</span></div>
+    `;
+  }catch(e){ /* handled by health check */ }
+}
+
+async function refreshStats(){
+  try{
+    const s = await apiGet('/stats');
+    document.getElementById('kpiTotal').textContent = s.total_scans;
+    document.getElementById('kpiAnomalies').textContent = s.anomalies_flagged;
+    document.getElementById('kpiRate').textContent = s.anomaly_rate + '% anomaly rate';
+    document.getElementById('kpiInference').textContent = s.avg_inference_ms > 0 ? s.avg_inference_ms.toFixed(1) + ' ms' : '\u2013';
+    classChart.data.datasets[0].data = [s.counts_by_type.clean, s.counts_by_type.jammed, s.counts_by_type.interference];
+    classChart.update();
+  }catch(e){}
+}
+
+async function refreshHistory(){
+  try{
+    const hist = await apiGet('/history?limit=30');
+    document.getElementById('historyCountTag').textContent = hist.length + ' scans';
+    if(hist.length === 0){
+      document.getElementById('alertsBody').innerHTML = '<tr><td colspan="5" class="empty-note">No scans yet -- run one above</td></tr>';
+    } else {
+      document.getElementById('alertsBody').innerHTML = hist.slice(0,10).map(r => {
+        const t = new Date(r.timestamp*1000).toLocaleTimeString();
+        const badgeCls = r.is_anomaly ? 'badge-anomaly' : 'badge-normal';
+        return `<tr><td class="mono">${t}</td><td>${r.signal_type}</td><td class="mono">${r.reconstruction_error.toFixed(5)}</td><td class="mono">${r.inference_ms.toFixed(1)} ms</td><td><span class="badge ${badgeCls}">${r.verdict}</span></td></tr>`;
+      }).join('');
+    }
+
+    const recent = hist.slice(0,20).reverse();
+    timelineChart.data.labels = recent.map((_,i)=>i+1);
+    timelineChart.data.datasets[0].data = recent.map(r => r.reconstruction_error);
+    timelineChart.data.datasets[0].backgroundColor = recent.map(r => r.is_anomaly ? '#FF4D6D' : '#00E5FF');
+    timelineChart.update();
+  }catch(e){}
+}
+
+async function runScan(signalType){
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true;
+  try{
+    const result = await apiGet('/scan/' + signalType);
+    document.getElementById('lastScanTag').textContent = signalType + ' \u00b7 error ' + result.reconstruction_error.toFixed(5);
+
+    spectrumChart.data.labels = result.power_spectrum.map((_,i)=>i);
+    spectrumChart.data.datasets[0].data = result.power_spectrum;
+    spectrumChart.data.datasets[1].data = result.power_spectrum.map(()=>result.noise_floor_estimate);
+    spectrumChart.update();
+
+    drawSpectrogram(result.spectrogram);
+
+    await Promise.all([refreshStats(), refreshHistory()]);
+  }catch(e){
+    console.error(e);
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('scanBtn').addEventListener('click', () => {
+  runScan(document.getElementById('signalSelect').value);
+});
+document.getElementById('batchBtn').addEventListener('click', async () => {
+  const type = document.getElementById('signalSelect').value;
+  const btn = document.getElementById('batchBtn');
+  btn.disabled = true;
+  for(let i=0;i<10;i++){ await runScan(type); }
+  btn.disabled = false;
+});
+
+let autoScanning = false, autoTimer = null;
+document.getElementById('autoToggle').addEventListener('click', function(){
+  autoScanning = !autoScanning;
+  this.classList.toggle('on', autoScanning);
+  if(autoScanning){
+    autoTimer = setInterval(() => {
+      const types = ['clean','clean','clean','jammed','interference'];
+      runScan(types[Math.floor(Math.random()*types.length)]);
+    }, 2500);
+  } else {
+    clearInterval(autoTimer);
+  }
+});
+
+// ---------- View switching ----------
+function switchView(view){
+  document.getElementById('dashboardView').style.display = view === 'dashboard' ? '' : 'none';
+  document.getElementById('performanceView').style.display = view === 'performance' ? '' : 'none';
+  document.getElementById('liveView').style.display = view === 'live' ? '' : 'none';
+  document.getElementById('settingsView').style.display = view === 'settings' ? '' : 'none';
+  document.getElementById('navDashboard').classList.toggle('active', view === 'dashboard');
+  document.getElementById('navPerformance').classList.toggle('active', view === 'performance');
+  document.getElementById('navLive').classList.toggle('active', view === 'live');
+  document.getElementById('navSettings').classList.toggle('active', view === 'settings');
+  if(view === 'performance' && !evalDataCache) loadEvalData();
+  if(view === 'settings') loadSettingsInfo();
+}
+
+// ---------- Model Performance page: real data, live-computed tradeoff ----------
+let evalDataCache = null;
+let evalScatterChart = null;
+
+async function loadEvalData(){
+  try{
+    evalDataCache = await apiGet('/eval-data');
+    const maxErr = Math.max(...evalDataCache.errors);
+    const slider = document.getElementById('thresholdSlider');
+    slider.max = (maxErr * 1.1).toFixed(5);
+    slider.value = evalDataCache.current_threshold;
+    document.getElementById('sliderMax').textContent = (maxErr * 1.1).toFixed(4);
+    buildEvalScatterChart();
+    recomputeMetrics(evalDataCache.current_threshold);
+  }catch(e){ console.error('Failed to load eval data', e); }
+}
+
+function buildEvalScatterChart(){
+  const names = evalDataCache.label_names;
+  const colors = {clean:'#00E676', jammed:'#FF9F1C', interference:'#FF4D6D'};
+  const byClass = {clean:[], jammed:[], interference:[]};
+  evalDataCache.errors.forEach((err, i) => {
+    const cls = names[evalDataCache.labels[i]];
+    byClass[cls].push({x: i, y: err});
+  });
+
+  const ctx = document.getElementById('evalScatterChart');
+  if(evalScatterChart) evalScatterChart.destroy();
+  evalScatterChart = new Chart(ctx, {
+    type:'scatter',
+    data:{ datasets: Object.keys(byClass).map(cls => ({
+      label: cls, data: byClass[cls], backgroundColor: colors[cls], pointRadius: 3.5,
+    })) },
+    options:{
+      responsive:true,
+      plugins:{ legend:{ labels:{ boxWidth:9, font:{size:10.5} } },
+        annotation:undefined },
+      scales:{
+        x:{ grid:{color:GRID}, title:{display:true, text:'sample index', font:{size:10}} },
+        y:{ grid:{color:GRID}, title:{display:true, text:'reconstruction error', font:{size:10}} },
+      }
+    },
+    plugins:[{
+      id:'thresholdLine',
+      afterDraw(chart){
+        const val = parseFloat(document.getElementById('thresholdSlider').value);
+        const yScale = chart.scales.y, xScale = chart.scales.x;
+        const y = yScale.getPixelForValue(val);
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.strokeStyle = '#00E5FF'; ctx.lineWidth = 1.5; ctx.setLineDash([5,4]);
+        ctx.beginPath(); ctx.moveTo(xScale.left, y); ctx.lineTo(xScale.right, y); ctx.stroke();
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+function recomputeMetrics(thresholdValue){
+  if(!evalDataCache) return;
+  const { errors, labels } = evalDataCache;
+  let cleanTotal=0, cleanFlagged=0, jammedTotal=0, jammedCaught=0, interferenceTotal=0, interferenceCaught=0;
+
+  errors.forEach((err, i) => {
+    const label = labels[i];
+    const flagged = err > thresholdValue;
+    if(label === 0){ cleanTotal++; if(flagged) cleanFlagged++; }
+    if(label === 1){ jammedTotal++; if(flagged) jammedCaught++; }
+    if(label === 2){ interferenceTotal++; if(flagged) interferenceCaught++; }
+  });
+
+  const fpRate = (cleanFlagged / cleanTotal) * 100;
+  const detRate = ((jammedCaught + interferenceCaught) / (jammedTotal + interferenceTotal)) * 100;
+
+  document.getElementById('fpRateVal').textContent = fpRate.toFixed(1) + '%';
+  document.getElementById('detRateVal').textContent = detRate.toFixed(1) + '%';
+  document.getElementById('cleanFlaggedVal').textContent = `${cleanFlagged} / ${cleanTotal}`;
+  document.getElementById('jammedCaughtVal').textContent = `${jammedCaught} / ${jammedTotal}`;
+  document.getElementById('interferenceCaughtVal').textContent = `${interferenceCaught} / ${interferenceTotal}`;
+  document.getElementById('thresholdSliderVal').textContent = thresholdValue.toFixed(5);
+
+  if(evalScatterChart) evalScatterChart.update();
+}
+
+document.getElementById('thresholdSlider').addEventListener('input', (e) => {
+  recomputeMetrics(parseFloat(e.target.value));
+});
+
+document.getElementById('applyThresholdBtn').addEventListener('click', async () => {
+  const val = parseFloat(document.getElementById('thresholdSlider').value);
+  const msgEl = document.getElementById('applyThresholdMsg');
+  try{
+    const res = await fetch(API_BASE + '/threshold', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({value: val}),
+    });
+    if(!res.ok) throw new Error('failed');
+    msgEl.textContent = `Live threshold updated to ${val.toFixed(5)} -- Dashboard scans now use this.`;
+    await loadModelInfo();
+    setTimeout(() => { msgEl.textContent = ''; }, 5000);
+  }catch(e){
+    msgEl.style.color = '#FF4D6D';
+    msgEl.textContent = 'Failed to update -- check API connection.';
+  }
+});
+
+// ---------- Live Detection: continuous monitoring session ----------
+let liveMonitoring = false;
+let liveTimer = null;
+let liveSessionLog = [];   // scans captured during THIS session only (separate from global /history)
+let liveSessionStart = null;
+let liveElapsedTimer = null;
+
+function weightedRandomSignalType(){
+  // Mimics passive spectrum monitoring: mostly clean, occasional anomalies.
+  const r = Math.random();
+  if (r < 0.70) return 'clean';
+  if (r < 0.85) return 'jammed';
+  return 'interference';
+}
+
+function formatElapsed(ms){
+  const totalSec = Math.floor(ms/1000);
+  const mm = String(Math.floor(totalSec/60)).padStart(2,'0');
+  const ss = String(totalSec%60).padStart(2,'0');
+  return `${mm}:${ss}`;
+}
+
+function updateSessionStats(){
+  const total = liveSessionLog.length;
+  const anomalies = liveSessionLog.filter(r => r.is_anomaly).length;
+  document.getElementById('liveScanCount').textContent = total;
+  document.getElementById('liveAnomalyCount').textContent = anomalies;
+  document.getElementById('liveAnomalyRate').textContent = total ? Math.round(anomalies/total*100) + '%' : '0%';
+}
+
+function renderEventFeed(){
+  const feed = document.getElementById('eventFeed');
+  if(liveSessionLog.length === 0){
+    feed.innerHTML = '<div class="empty-note">Start monitoring to see live events</div>';
+    return;
+  }
+  const iconNormal = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>';
+  const iconAnomaly = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 9v4M12 17h.01M10.3 3.9 2.5 17a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>';
+  feed.innerHTML = [...liveSessionLog].reverse().slice(0, 40).map(r => {
+    const cls = r.is_anomaly ? 'anomaly' : 'normal';
+    const icon = r.is_anomaly ? iconAnomaly : iconNormal;
+    const t = new Date(r.timestamp*1000).toLocaleTimeString();
+    return `<div class="event-item">
+      <div class="event-icon ${cls}">${icon}</div>
+      <div class="event-text"><b>${r.signal_type}</b> scan &mdash; error ${r.reconstruction_error.toFixed(5)} &mdash; ${r.verdict}</div>
+      <div class="event-time">${t}</div>
+    </div>`;
+  }).join('');
+}
+
+async function liveScanCycle(){
+  const signalType = weightedRandomSignalType();
+  try{
+    const result = await apiGet('/scan/' + signalType);
+    liveSessionLog.push(result);
+    if(liveSessionLog.length > 500) liveSessionLog.shift();
+
+    document.getElementById('liveScanTag').textContent = signalType + ' \u00b7 ' + new Date().toLocaleTimeString();
+    drawSpectrogram(result.spectrogram, 'liveSpectrogramCanvas');
+
+    const verdictEl = document.getElementById('liveVerdictBig');
+    verdictEl.classList.remove('idle','normal','anomaly');
+    if(result.is_anomaly){
+      verdictEl.classList.add('anomaly');
+      verdictEl.textContent = '\u26A0 ANOMALY DETECTED \u2014 ' + signalType.toUpperCase();
+    } else {
+      verdictEl.classList.add('normal');
+      verdictEl.textContent = '\u2713 NORMAL \u2014 ' + signalType.toUpperCase();
+    }
+
+    updateSessionStats();
+    renderEventFeed();
+  }catch(e){ console.error('live scan failed', e); }
+}
+
+function startMonitoring(){
+  liveMonitoring = true;
+  liveSessionStart = Date.now();
+  const btn = document.getElementById('liveToggleBtn');
+  btn.classList.remove('btn-primary'); btn.classList.add('btn-danger');
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>Stop monitoring';
+
+  const intervalMs = parseInt(document.getElementById('liveIntervalSelect').value);
+  liveScanCycle();
+  liveTimer = setInterval(liveScanCycle, intervalMs);
+  liveElapsedTimer = setInterval(() => {
+    document.getElementById('liveElapsed').textContent = formatElapsed(Date.now() - liveSessionStart);
+  }, 1000);
+}
+
+function stopMonitoring(){
+  liveMonitoring = false;
+  const btn = document.getElementById('liveToggleBtn');
+  btn.classList.remove('btn-danger'); btn.classList.add('btn-primary');
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="6 3 20 12 6 21 6 3"/></svg>Start monitoring';
+  clearInterval(liveTimer);
+  clearInterval(liveElapsedTimer);
+}
+
+document.getElementById('liveToggleBtn').addEventListener('click', () => {
+  if(liveMonitoring) stopMonitoring(); else startMonitoring();
+});
+
+document.getElementById('liveExportBtn').addEventListener('click', () => {
+  if(liveSessionLog.length === 0){ alert('No session data yet -- start monitoring first.'); return; }
+  const header = 'timestamp,signal_type,reconstruction_error,threshold,is_anomaly,verdict,inference_ms\n';
+  const rows = liveSessionLog.map(r =>
+    `${new Date(r.timestamp*1000).toISOString()},${r.signal_type},${r.reconstruction_error},${r.threshold},${r.is_anomaly},${r.verdict},${r.inference_ms}`
+  ).join('\n');
+  const blob = new Blob([header + rows], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `jamwatch_session_${Date.now()}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// ---------- Settings page ----------
+async function loadSettingsInfo(){
+  try{
+    await apiGet('/health');
+    document.getElementById('settingsHealthBadge').innerHTML = '&#9679; Connected';
+  }catch(e){
+    document.getElementById('settingsHealthBadge').innerHTML = '&#9679; Offline';
+  }
+  document.getElementById('settingsApiBase').textContent = API_BASE;
+  try{
+    const info = await apiGet('/model-info');
+    document.getElementById('settingsParams').textContent = info.parameters.toLocaleString();
+    document.getElementById('settingsDevice').textContent = info.device.toUpperCase();
+    document.getElementById('settingsThreshold').textContent = info.threshold.toFixed(5);
+    document.getElementById('manualThresholdInput').value = info.threshold.toFixed(5);
+  }catch(e){}
+}
+
+document.getElementById('manualThresholdBtn').addEventListener('click', async () => {
+  const val = parseFloat(document.getElementById('manualThresholdInput').value);
+  const msgEl = document.getElementById('manualThresholdMsg');
+  if(isNaN(val) || val <= 0){ msgEl.style.color = '#FF4D6D'; msgEl.textContent = 'Enter a positive number.'; return; }
+  try{
+    await fetch(API_BASE + '/threshold', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({value: val}),
+    });
+    msgEl.style.color = '#00E676';
+    msgEl.textContent = `Threshold updated to ${val.toFixed(5)}.`;
+    loadSettingsInfo();
+    setTimeout(() => { msgEl.textContent = ''; }, 4000);
+  }catch(e){
+    msgEl.style.color = '#FF4D6D'; msgEl.textContent = 'Failed to update -- check API connection.';
+  }
+});
+
+document.getElementById('resetSessionBtn').addEventListener('click', async () => {
+  const msgEl = document.getElementById('resetSessionMsg');
+  try{
+    const res = await fetch(API_BASE + '/history', { method:'DELETE' });
+    const data = await res.json();
+    msgEl.style.color = '#00E676';
+    msgEl.textContent = data.message + '.';
+    liveSessionLog = [];
+    updateSessionStats(); renderEventFeed();
+    refreshStats(); refreshHistory();
+    setTimeout(() => { msgEl.textContent = ''; }, 4000);
+  }catch(e){
+    msgEl.style.color = '#FF4D6D'; msgEl.textContent = 'Failed to reset -- check API connection.';
+  }
+});
+
+// ---------- Init ----------
+(async function init(){
+  const ok = await checkHealth();
+  if(ok){
+    await loadModelInfo();
+    await refreshStats();
+    await refreshHistory();
+  }
+  setInterval(checkHealth, 10000);
+})();
+</script>
+</body>
+</html>

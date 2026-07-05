@@ -1,0 +1,32 @@
+# Training-only scripts and artifacts -- not needed to serve the trained model
+dataset_builder.py
+train_autoencoder.py
+threshold_selector.py
+visualize_examples.py
+visualize_results.py
+radioml_loader.py
+jamwatch_dataset.npz
+spectrogram_examples.png
+anomaly_detection_results.png
+RML2016.10a_dict.pkl
+
+# Alternative UI (Streamlit) -- the container serves the HTML dashboard instead
+dashboard.py
+
+# Python / editor / OS noise
+__pycache__/
+*.pyc
+.venv/
+venv/
+.vscode/
+.idea/
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore

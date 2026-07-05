@@ -1,0 +1,12 @@
+services:
+  jamwatch:
+    build: .
+    container_name: jamwatch
+    ports:
+      - "8000:8000"
+    # Persists threshold changes made via the Settings page or the Model
+    # Performance page across container restarts, since api.py writes the
+    # live threshold back to this file.
+    volumes:
+      - ./threshold.txt:/app/threshold.txt
+    restart: unless-stopped
